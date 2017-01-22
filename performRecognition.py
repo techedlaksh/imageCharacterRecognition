@@ -1,7 +1,6 @@
 # Import the modules
 import cv2
 from sklearn.externals import joblib
-from skimage.feature import hog
 import numpy as np
 import sys, getopt
 from keras.models import load_model
@@ -10,7 +9,7 @@ def main(argv):
     inp_pic = "timages/"
     try:
         opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
-    except getopt.GetoptError:
+    except getopt.GetoptError:  
         print 'test.py -i <inputfile>'
         sys.exit(2)
     for opt, arg in opts:
@@ -21,7 +20,7 @@ def main(argv):
             inp_pic += arg
 
     # Load the Keras CNN trained model
-    model = load_model('tmodels/digit.h5')
+    model = load_model('tmodels/cDigit1.h5')
 
     # Original image
     im = cv2.imread(inp_pic)
@@ -48,7 +47,10 @@ def main(argv):
 
     # Adaptive Threshold for handling lightning
     im_th = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,11,5)
-    cv2.imshow("Threshold Image",im_th)
+    # cv2.imshow("Threshold Image",im_th)
+    kernel = np.ones((1,1),np.uint8)
+    im_th = cv2.dilate(im_th,kernel,iterations = 4)
+    cv2.imshow("After", im_th)
     ##################################################################################################
 
 
@@ -69,12 +71,17 @@ def main(argv):
         roi = im_th[pt1:pt1+leng, pt2:pt2+leng]
         # Resize the image
         roi = cv2.resize(roi, (28, 28), interpolation=cv2.INTER_AREA)
-        roi = roi.flatten()
-        roi = roi[np.newaxis]
-        nbr = model.predict_classes(roi,verbose=0)
-        cv2.putText(im, str(int(nbr[0])), (rect[0], rect[1]),cv2.FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3)
+        
+        # Input for CNN Model
+        roi = roi[np.newaxis,np.newaxis,:,:]
 
-    cv2.imshow("Resulting Image with Rectangular ROIs", im)
+        # Input for Feed Forward Model
+        # roi = roi.flatten()
+        # roi = roi[np.newaxis]
+        nbr = model.predict_classes(roi,verbose=0)
+        cv2.putText(im, str(int(nbr[0])), (int(rect[0]), int(rect[1])),cv2.FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3)
+
+    cv2.imshow("Resulting Image with Predicted numbers", im)
     cv2.waitKey()
 
 if __name__ == "__main__":
